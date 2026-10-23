@@ -1,0 +1,1538 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Mind Reader — Computer Guesses Your Number</title>
+<style>
+:root {
+  --bg: #0d1117; --panel: #151d27; --panel2: #1d2936; --line: #30404f;
+  --text: #f1f5f9; --muted: #a9b9c6; --gold: #f3c969; --green: #8de0b0;
+  --red: #ffb0ac; --blue: #8bc8ff; --focus: #8bc8ff;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; min-height: 100vh; color: var(--text);
+  background: radial-gradient(ellipse at 50% -10%, #263e56 0, #0d1117 58%) #0d1117;
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; justify-content: center; align-items: flex-start; padding: 22px;
+}
+button, input, select { font: inherit; }
+button {
+  cursor: pointer; border: 1px solid #5a7085; border-radius: 11px; padding: 11px 15px; min-height: 44px;
+  background: #273746; color: var(--text); transition: background .16s, transform .16s;
+}
+button:hover { background: #344b60; transform: translateY(-1px); }
+button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.primary { background: var(--gold); border-color: #ffe4a0; color: #1c2024; font-weight: 800; }
+.primary:hover { background: #ffdc82; }
+.skip {
+  position: absolute; left: -999px; top: 8px; background: var(--gold); color: #1c2024;
+  padding: 8px 12px; border-radius: 8px; z-index: 10;
+}
+.skip:focus { left: 8px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; margin: -1px; padding: 0; border: 0;
+}
+
+.app { width: min(760px, 100%); display: grid; grid-template-columns: minmax(0, 1fr); }
+.app > header { grid-column: 1; }
+.app > .card { grid-column: 1; }
+.app > .footer { grid-column: 1; }
+header { text-align: center; margin-bottom: 20px; }
+.eyebrow { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--gold); font-weight: 800; }
+h1 { font-size: clamp(30px, 6vw, 48px); line-height: 1.1; letter-spacing: -.04em; margin: 8px 0; }
+.sub { color: var(--muted); max-width: 560px; margin: 0 auto; }
+
+.card {
+  border: 1px solid var(--line); border-radius: 22px; overflow: hidden;
+  background: linear-gradient(145deg, #1a2632, #121922); box-shadow: 0 24px 80px #0005;
+}
+.topline {
+  display: flex; justify-content: space-between; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 15px 19px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px;
+}
+.pill { border: 1px solid #4d6073; background: #202e3b; border-radius: 20px; padding: 5px 9px; white-space: nowrap; }
+.content { padding: clamp(18px, 4vw, 30px); }
+
+.settings { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { background: #101821; border: 1px solid #2d3d4b; border-radius: 13px; padding: 12px; }
+.field label { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .12em; margin-bottom: 7px; }
+.field select { width: 100%; background: #202e3b; color: var(--text); border: 1px solid #5a7085; border-radius: 8px; padding: 9px; min-height: 44px; }
+.field select:disabled { opacity: .6; cursor: not-allowed; }
+
+.howto { margin-top: 14px; border: 1px solid #2d3d4b; border-radius: 13px; background: #101821; padding: 10px 14px; }
+.howto summary { cursor: pointer; font-weight: 700; color: var(--gold); }
+.howto ol { margin: 10px 0 4px; padding-left: 20px; color: #d2dce4; }
+.howto li { margin: 4px 0; }
+
+.status { margin: 22px 0 18px; text-align: center; min-height: 92px; }
+.status h2 { margin: 0 0 8px; font-size: clamp(20px, 4vw, 27px); }
+.status p { color: var(--muted); margin: 0; }
+
+.question { background: #0c131b; border: 1px solid #3f566a; border-radius: 17px; padding: 22px 18px; text-align: center; margin: 16px auto; max-width: 560px; }
+.qtag { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--gold); font-weight: 800; }
+.question h2 { font-size: clamp(20px, 4vw, 29px); line-height: 1.3; margin: 10px 0 0; }
+.qnote { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+
+.answers { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 6px; }
+.answers button { min-width: 115px; }
+.answers .yes { border-color: #5aa17d; background: #19392b; }
+.answers .no { border-color: #b3646a; background: #3c2227; }
+.answers .unsure { background: #26313d; }
+.hint { text-align: center; color: var(--muted); font-size: 12px; margin: 0 0 8px; }
+kbd { border: 1px solid #5a7085; border-radius: 5px; padding: 0 5px; background: #202e3b; font: inherit; font-size: 11px; }
+
+.guessbox, .problembox, .solvedbox { text-align: center; margin: 18px 0; padding: 17px; border-radius: 15px; }
+.guessbox, .solvedbox { border: 1px solid #5aa17d; background: #18372a; }
+.problembox { border: 1px solid #b3646a; background: #3a2024; text-align: left; }
+.guessbox h3, .solvedbox h3 { margin: 0 0 6px; font-size: 23px; }
+.guessbox p, .solvedbox p { color: #d3f1df; margin: 0 0 12px; }
+.guessbox button, .solvedbox button { margin: 4px; }
+.problembox h3 { margin: 0 0 6px; font-size: 20px; color: #ffd1ce; }
+.problembox p { margin: 0 0 10px; color: #f3dcda; }
+.fixlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fixlist button { width: 100%; text-align: left; font-size: 13px; }
+.fixlist summary { cursor: pointer; color: #ffd1ce; font-weight: 700; padding: 6px 2px; }
+.fixlist details ul { margin-top: 8px; }
+.problembox .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+.meter { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin: 18px 0 4px; }
+.pip { height: 5px; width: 20px; border-radius: 8px; background: var(--gold); }
+
+.history { margin-top: 22px; }
+.historyhead { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 9px; }
+.historyhead h2 { font-size: inherit; margin: 0; font-weight: inherit; letter-spacing: inherit; }
+.historylist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.entry { background: #202d39; border: 1px solid #435a6c; padding: 10px 12px; border-radius: 10px; font-size: 13px; display: flex; gap: 10px; align-items: flex-start; }
+.entry.unsure { border-style: dashed; border-color: var(--gold); background: #2a2a24; }
+.entry .n { color: var(--gold); font-weight: 800; min-width: 28px; }
+.entry .body { flex: 1; min-width: 0; }
+.entry .q { font-weight: 700; }
+.entry .meta { color: #d2dce4; margin-top: 2px; }
+.badge { display: inline-block; border: 1px solid var(--gold); color: var(--gold); border-radius: 12px; padding: 0 8px; font-size: 11px; font-weight: 700; margin-left: 6px; }
+.fix { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.fix button { min-height: 36px; padding: 5px 10px; font-size: 12px; }
+.fix button[aria-pressed="true"] { background: var(--gold); border-color: #ffe4a0; color: #1c2024; font-weight: 800; }
+.empty { color: var(--muted); font-size: 13px; }
+.rejected { margin-top: 14px; }
+.rejected h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 400; }
+.rejected ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.rejected li { background: #3a2024; border: 1px solid #b3646a; border-radius: 10px; padding: 8px 12px; font-size: 13px; display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.rejected button { min-height: 36px; padding: 5px 10px; font-size: 12px; }
+
+.message { border-radius: 12px; padding: 12px; margin-top: 15px; text-align: center; }
+.message.success { background: #18372a; color: #bdf3d1; border: 1px solid #4a8a69; }
+.message.fail { background: #402225; color: #ffc7c4; border: 1px solid #b3646a; }
+.message:empty { display: none; }
+
+.bottom { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 15px 19px; border-top: 1px solid var(--line); background: #0c131b; }
+.bottom button { font-size: 13px; padding: 8px 12px; }
+.footer { text-align: center; color: #98a9b6; font-size: 12px; margin-top: 14px; }
+
+/* ---- Division Calculator (independent convenience panel) ---- */
+.calc { grid-column: 1; margin-top: 16px; align-self: start; }
+.calc .topline { padding: 12px 16px; }
+.calc-title { margin: 0; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.calc-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.calc-note { margin: 0; color: var(--muted); font-size: 12px; }
+.calc .field { padding: 10px; }
+.calc .field input {
+  width: 100%; background: #202e3b; color: var(--text); border: 1px solid #5a7085; border-radius: 8px;
+  padding: 9px; min-height: 44px; font-variant-numeric: tabular-nums;
+}
+.calc .field input[aria-invalid="true"] { border-color: #b3646a; background: #3a2024; }
+.calc-results { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.calc-tile { background: #0c131b; border: 1px solid #3f566a; border-radius: 11px; padding: 8px 10px; min-width: 0; }
+.calc-k { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; }
+.calc-v { display: block; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.calc-tile:nth-child(n+3) .calc-v { color: var(--gold); }
+.calc-message { margin: 0; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; min-height: 2.9em; }
+.calc-message.ok { color: #bdf3d1; }
+.calc-message.bad { color: #ffc7c4; }
+.calc button { align-self: flex-start; font-size: 13px; padding: 8px 14px; }
+
+/* Wide screens: calculator beside the game (right side). */
+@media (min-width: 1060px) {
+  .app { width: min(1030px, 100%); grid-template-columns: minmax(0, 760px) 252px; column-gap: 18px; justify-content: center; }
+  .app > header { grid-column: 1; grid-row: 1; }
+  .app > .card:not(.calc) { grid-column: 1; grid-row: 2; }
+  .app > .calc { grid-column: 2; grid-row: 2; margin-top: 0; }
+  .app > .footer { grid-column: 1; grid-row: 3; }
+}
+/* Very wide screens: game stays centred, calculator sits in the right-hand gutter. */
+@media (min-width: 1360px) {
+  .app { width: 100%; grid-template-columns: minmax(0, 1fr) minmax(0, 760px) minmax(0, 1fr); }
+  .app > header { grid-column: 2; }
+  .app > .card:not(.calc) { grid-column: 2; }
+  .app > .calc { grid-column: 3; margin-left: 18px; width: 252px; }
+  .app > .footer { grid-column: 2; }
+}
+
+@media (max-width: 520px) {
+  body { padding: 12px; }
+  .settings { grid-template-columns: 1fr; }
+  .topline { padding: 12px; }
+  .content { padding: 18px; }
+  .answers button { flex: 1; min-width: 90px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+  button:hover { transform: none; }
+}
+
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to the game</a>
+<div class="app">
+  <header>
+    <div class="eyebrow">You think it. I deduce it.</div>
+    <h1><span aria-hidden="true">🧠</span> Mind Reader</h1>
+    <p class="sub">Think of a whole number and keep it secret. The computer asks mathematical yes/no questions — never “Is it X?” and never higher/lower. It only names a number once exactly one number fits your answers.</p>
+  </header>
+
+  <main class="card" id="main">
+    <div class="topline">
+      <span id="roundLabel">ROUND 01</span>
+      <span class="pill" id="rangeLabel">1–100</span>
+      <span class="pill" id="remainingLabel">100 possible numbers</span>
+    </div>
+
+    <div class="content">
+      <div class="settings">
+        <div class="field">
+          <label for="range">Number range</label>
+          <select id="range">
+            <option value="50">1 to 50 · Quick</option>
+            <option value="100" selected>1 to 100 · Classic</option>
+            <option value="250">1 to 250 · Tricky</option>
+            <option value="1000">1 to 1000 · Expert</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="order">Question order</label>
+          <select id="order">
+            <option value="varied" selected>Varied (different each round)</option>
+            <option value="predictable">Predictable (same every time)</option>
+          </select>
+        </div>
+      </div>
+
+      <details class="howto" id="howto" open>
+        <summary>How to play</summary>
+        <ol>
+          <li>Pick a range, think of one whole number in it, and keep it in your head. <strong>Never type it anywhere.</strong></li>
+          <li>Press “I have my number”, then answer each question with <strong>Yes</strong>, <strong>No</strong> or <strong>Not sure</strong>.</li>
+          <li><strong>Not sure</strong> is safe: it narrows nothing and is marked as uncertain in your list.</li>
+          <li>Made a mistake? Use the Yes / No / Not sure buttons on any earlier answer to fix it, or press Undo. The count of possible numbers is recalculated instantly.</li>
+          <li>When exactly one number fits, the computer names it and asks you to confirm. A mistaken “not my number” click can be undone.</li>
+        </ol>
+      </details>
+
+      <div class="status" aria-live="polite" aria-atomic="true">
+        <h2 id="headline">Ready when you are?</h2>
+        <p id="description">Choose your range, think of one whole number in it, then press the button. Don’t type your number anywhere.</p>
+      </div>
+
+      <div class="answers" id="startControls">
+        <button class="primary" id="startBtn" type="button">I have my number ↗</button>
+      </div>
+
+      <div id="playArea" hidden>
+        <div class="question" id="questionBox" hidden>
+          <div class="qtag" id="qTag">QUESTION 1</div>
+          <h2 id="questionText" data-qid="">Is your number even?</h2>
+          <p class="qnote" id="qNote" hidden></p>
+        </div>
+        <div class="answers" id="answerButtons" role="group" aria-label="Your answer" hidden>
+          <button class="yes" id="yesBtn" type="button" aria-keyshortcuts="Y">Yes</button>
+          <button class="no" id="noBtn" type="button" aria-keyshortcuts="N">No</button>
+          <button class="unsure" id="unsureBtn" type="button" aria-keyshortcuts="S">Not sure</button>
+        </div>
+        <p class="hint" id="answerHint" hidden>Shortcuts: <kbd>Y</kbd> Yes · <kbd>N</kbd> No · <kbd>S</kbd> Not sure</p>
+
+        <div class="guessbox" id="guessBox" hidden>
+          <h3 id="guessText" tabindex="-1">Only one number fits.</h3>
+          <p id="guessDesc"></p>
+          <button class="primary" id="correctBtn" type="button">🎯 Yes, that’s my number</button>
+          <button id="wrongBtn" type="button">No, that’s not my number</button>
+        </div>
+
+        <div class="solvedbox" id="solvedBox" hidden>
+          <h3 id="solvedText" tabindex="-1">Mind read!</h3>
+          <p id="solvedDesc"></p>
+          <button class="primary" id="againBtn" type="button">Play again</button>
+        </div>
+
+        <div class="problembox" id="problemBox" hidden>
+          <h3 id="problemTitle" tabindex="-1"></h3>
+          <p id="problemText"></p>
+          <ul class="fixlist" id="fixList"></ul>
+          <div class="row" id="problemExtra"></div>
+        </div>
+
+        <div class="meter" id="meter" aria-hidden="true"></div>
+
+        <section class="history" aria-labelledby="historyTitle">
+          <div class="historyhead">
+            <h2 id="historyTitle" tabindex="-1">My questions</h2>
+            <span id="questionCount">0 asked</span>
+          </div>
+          <ul class="historylist" id="history"></ul>
+          <div class="rejected" id="rejectedSection" hidden>
+            <h3>Numbers I named that you rejected</h3>
+            <ul id="rejectedList"></ul>
+          </div>
+        </section>
+      </div>
+
+      <div class="message" id="notice" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="bottom">
+      <button id="undoBtn" type="button" disabled>↶ Undo last step</button>
+      <button id="reviewBtn" type="button">✎ Review answers</button>
+      <button id="restartBtn" type="button">↻ Start over</button>
+    </div>
+  </main>
+  <aside class="card calc" id="calcPanel" aria-labelledby="calcTitle">
+    <div class="topline"><h2 class="calc-title" id="calcTitle">Division Calculator</h2></div>
+    <div class="calc-body">
+      <p class="calc-note">A handy helper for checking remainders. It uses only the numbers you type here.</p>
+      <div class="field">
+        <label for="calcDividend">Dividend</label>
+        <input id="calcDividend" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24" aria-describedby="calcMessage">
+      </div>
+      <div class="field">
+        <label for="calcDivisor">Divisor</label>
+        <input id="calcDivisor" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24" aria-describedby="calcMessage">
+      </div>
+      <div class="calc-results" role="group" aria-label="Division result">
+        <div class="calc-tile"><span class="calc-k">Dividend</span><span class="calc-v" id="calcOutDividend">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Divisor</span><span class="calc-v" id="calcOutDivisor">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Quotient</span><span class="calc-v" id="calcOutQuotient">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Remainder</span><span class="calc-v" id="calcOutRemainder">—</span></div>
+      </div>
+      <p class="calc-message" id="calcMessage" role="status" aria-live="polite"></p>
+      <button id="calcClear" type="button">Clear</button>
+    </div>
+  </aside>
+  <div class="footer">Fully offline · no tracking · no direct number checks — just mathematical deduction.</div>
+</div>
+
+<script>
+/*
+ * questions.js — QUESTION GENERATION
+ *
+ * Builds the bank of yes/no mathematical-property questions for one range and
+ * validates that no question is a direct number check or a disguised cutoff.
+ * Pure functions only: no DOM, no randomness, no I/O.
+ *
+ * Every question has a stable, parametric id (for example "mod:7:3") so a
+ * history of answers can always be re-evaluated from ids alone.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.MRQuestions = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var SUPPORTED_RANGES = Object.freeze([50, 100, 250, 1000]);
+
+  // Residue questions up to this modulus belong to the standard bank.
+  // Larger moduli are only generated adaptively (see adaptive()).
+  var BASE_MAX_MODULUS = 30;
+
+  // A question is "legitimate" only if, over the FULL range 1..max:
+  //  - both the yes-set and the no-set contain at least MIN_SIDE_SIZE numbers
+  //    (so it can never be "is it N?" or "is it one of these two?"), and
+  //  - both sets consist of at least MIN_RUNS separate stretches of consecutive
+  //    integers (so it can never be a cutoff such as "n >= 100",
+  //    "n <= 10" or "exactly two digits" in disguise).
+  var MIN_SIDE_SIZE = 3;
+  var MIN_RUNS = 3;
+
+  // Wording that would signal a direct check or an ordering/cutoff question.
+  var FORBIDDEN_TEXT = /\b(greater|less|higher|lower|bigger|smaller|larger|above|below|between|at least|at most|more than|fewer|exceeds?|equals?|equal to)\b|\bis (it|your number) (exactly )?\d+\b/i;
+
+  /* ---------- exact integer helpers ---------- */
+
+  function isqrt(n) {
+    var r = Math.floor(Math.sqrt(n));
+    while (r * r > n) r--;
+    while ((r + 1) * (r + 1) <= n) r++;
+    return r;
+  }
+  function icbrt(n) {
+    var r = Math.round(Math.cbrt(n));
+    while (r * r * r > n) r--;
+    while ((r + 1) * (r + 1) * (r + 1) <= n) r++;
+    return r;
+  }
+  function isPrime(n) {
+    if (n < 2) return false;
+    if (n % 2 === 0) return n === 2;
+    for (var i = 3; i * i <= n; i += 2) if (n % i === 0) return false;
+    return true;
+  }
+  function isSquare(n) { var r = isqrt(n); return r * r === n; }
+  function isCube(n) { var r = icbrt(n); return r * r * r === n; }
+  function isSquareFree(n) {
+    for (var p = 2; p * p <= n; p++) if (n % (p * p) === 0) return false;
+    return true;
+  }
+  function digitsOf(n) {
+    var d = [];
+    for (var x = n; x > 0; x = Math.floor(x / 10)) d.push(x % 10);
+    return d.reverse();
+  }
+  function digitSum(n) {
+    var s = 0;
+    for (var x = n; x > 0; x = Math.floor(x / 10)) s += x % 10;
+    return s;
+  }
+  function hasRepeatedDigit(n) {
+    var d = digitsOf(n), seen = {};
+    for (var i = 0; i < d.length; i++) { if (seen[d[i]]) return true; seen[d[i]] = true; }
+    return false;
+  }
+  function isPalindrome(n) {
+    var s = String(n);
+    return s === s.split('').reverse().join('');
+  }
+
+  /* ---------- question constructors ---------- */
+
+  function def(id, text, tag, complexity, test, adaptive) {
+    return Object.freeze({ id: id, text: text, tag: tag, complexity: complexity, test: test, adaptive: !!adaptive });
+  }
+
+  function modQuestion(m, r) {
+    var adaptive = m > BASE_MAX_MODULUS;
+    var text, tag, complexity;
+    if (r === 0) {
+      text = 'Is your number divisible by ' + m + '?';
+      tag = 'Divisibility';
+      complexity = m <= 10 ? 1 : 2;
+    } else if (m === 10) {
+      text = 'Does your number end in the digit ' + r + '?';
+      tag = 'Digit property';
+      complexity = 1;
+    } else {
+      text = 'When your number is divided by ' + m + ', is the remainder ' + r + '?';
+      tag = 'Remainder';
+      complexity = m <= 13 ? 2 : 3;
+    }
+    return def('mod:' + m + ':' + r, text, tag, adaptive ? 4 : complexity,
+      function (n) { return n % m === r; }, adaptive);
+  }
+
+  function digitSumModQuestion(k, r) {
+    var text = r === 0
+      ? 'When you add up the digits of your number, is the total divisible by ' + k + '?'
+      : 'When you add up the digits of your number and divide the total by ' + k + ', is the remainder ' + r + '?';
+    return def('dsm:' + k + ':' + r, text, 'Digit property', 4,
+      function (n) { return digitSum(n) % k === r; }, true);
+  }
+
+  // Every definition the standard bank may contain, in priority order.
+  // Earlier definitions win when two questions split the range identically.
+  function baseDefinitions() {
+    var d = [];
+    d.push(def('even', 'Is your number even?', 'Parity', 1, function (n) { return n % 2 === 0; }));
+    d.push(def('prime', 'Is your number a prime number?', 'Prime', 2, isPrime));
+    d.push(def('square', 'Is your number a perfect square?', 'Perfect power', 2, isSquare));
+    d.push(def('cube', 'Is your number a perfect cube?', 'Perfect power', 2, isCube));
+    for (var m = 3; m <= BASE_MAX_MODULUS; m++) {
+      for (var r = 0; r < m; r++) d.push(modQuestion(m, r));
+    }
+    d.push(def('dsum:even', 'Is the sum of its digits even?', 'Digit property', 2,
+      function (n) { return digitSum(n) % 2 === 0; }));
+    d.push(def('dsum:prime', 'Is the sum of its digits a prime number?', 'Digit property', 2,
+      function (n) { return isPrime(digitSum(n)); }));
+    d.push(def('dsum:square', 'Is the sum of its digits a perfect square?', 'Digit property', 2,
+      function (n) { return isSquare(digitSum(n)); }));
+    for (var dg = 0; dg <= 9; dg++) {
+      (function (digit) {
+        d.push(def('has:' + digit, 'Does your number contain the digit ' + digit + '?', 'Digit property', 1,
+          function (n) { return digitsOf(n).indexOf(digit) !== -1; }));
+      })(dg);
+    }
+    d.push(def('rep', 'Does your number contain a repeated digit?', 'Digit property', 2, hasRepeatedDigit));
+    d.push(def('allodd', 'Are all the digits of your number odd?', 'Digit property', 1,
+      function (n) { return digitsOf(n).every(function (x) { return x % 2 === 1; }); }));
+    d.push(def('alleven', 'Are all the digits of your number even?', 'Digit property', 1,
+      function (n) { return digitsOf(n).every(function (x) { return x % 2 === 0; }); }));
+    d.push(def('firsteven', 'Is the first (leftmost) digit of your number even?', 'Digit property', 2,
+      function (n) { return digitsOf(n)[0] % 2 === 0; }));
+    d.push(def('palin', 'Does your number read the same forwards and backwards?', 'Digit property', 2, isPalindrome));
+    d.push(def('squarefree', 'Is your number square-free (not divisible by any perfect square except 1)?', 'Factors', 3, isSquareFree));
+    return d;
+  }
+
+  /* ---------- legitimacy analysis ---------- */
+
+  // One pass over 1..max: counts and runs for both sides plus a bitmap signature.
+  function profile(test, max) {
+    var yes = 0, runsYes = 0, runsNo = 0, prev = -1, bits = new Array(max);
+    for (var n = 1; n <= max; n++) {
+      var v = test(n) ? 1 : 0;
+      bits[n - 1] = v;
+      yes += v;
+      if (v !== prev) { if (v) runsYes++; else runsNo++; }
+      prev = v;
+    }
+    return { yes: yes, no: max - yes, runsYes: runsYes, runsNo: runsNo, sig: bits.join('') };
+  }
+  function isLegitProfile(p) {
+    return p.yes >= MIN_SIDE_SIZE && p.no >= MIN_SIDE_SIZE && p.runsYes >= MIN_RUNS && p.runsNo >= MIN_RUNS;
+  }
+  function complementSig(sig) {
+    return sig.replace(/[01]/g, function (c) { return c === '1' ? '0' : '1'; });
+  }
+  function isLegitQuestion(q, max) {
+    return !FORBIDDEN_TEXT.test(q.text) && isLegitProfile(profile(q.test, max));
+  }
+
+  // Size of the residue class {n in 1..max : n % m === r}.
+  function modClassSize(max, m, r) {
+    if (r === 0) return Math.floor(max / m);
+    if (r > max) return 0;
+    return Math.floor((max - r) / m) + 1;
+  }
+
+  /* ---------- question source for one range ---------- */
+
+  var sourceCache = {};
+
+  /**
+   * createQuestionSource(max, options?)
+   *   base           standard bank: legitimate, de-duplicated questions
+   *   byId(id)       resolve any question id (standard or adaptive) or null
+   *   adaptive(candidates, usedIds)
+   *                  generate further legitimate questions that split the
+   *                  given candidates; only used when `base` cannot.
+   *   options.baseFilter(def) -> boolean   (tests only: restrict the bank)
+   */
+  function createQuestionSource(max, options) {
+    if (SUPPORTED_RANGES.indexOf(max) === -1) throw new RangeError('Unsupported range: ' + max);
+    var filter = options && options.baseFilter;
+    if (!filter && sourceCache[max]) return sourceCache[max];
+
+    var defs = baseDefinitions();
+    var allById = new Map();
+    defs.forEach(function (q) { allById.set(q.id, q); });
+
+    var base = [];
+    var seen = new Set();
+    defs.forEach(function (q) {
+      if (filter && !filter(q)) return;
+      var p = profile(q.test, max);
+      if (!isLegitProfile(p)) return;
+      if (seen.has(p.sig) || seen.has(complementSig(p.sig))) return; // redundant partition
+      seen.add(p.sig);
+      base.push(q);
+    });
+    var baseIds = new Set(base.map(function (q) { return q.id; }));
+    var extra = new Map();
+
+    function parseExtra(id) {
+      var parts = id.split(':');
+      if (parts.length !== 3) return null;
+      var a = Number(parts[1]), b = Number(parts[2]);
+      if (!Number.isInteger(a) || !Number.isInteger(b) || a < 3 || b < 0 || b >= a) return null;
+      var q = null;
+      if (parts[0] === 'mod' && a <= Math.floor(max / MIN_SIDE_SIZE)) q = modQuestion(a, b);
+      else if (parts[0] === 'dsm' && a <= 12) q = digitSumModQuestion(a, b);
+      return q && isLegitQuestion(q, max) ? q : null;
+    }
+
+    function byId(id) {
+      if (allById.has(id)) return allById.get(id);
+      if (extra.has(id)) return extra.get(id);
+      var q = parseExtra(id);
+      if (q) extra.set(id, q);
+      return q;
+    }
+
+    // Adaptive generation: search wider residue / digit-sum families for
+    // legitimate questions that split THESE candidates, best splits first.
+    function adaptive(candidates, usedIds) {
+      var total = candidates.length;
+      var found = [];
+      var mMax = Math.floor(max / MIN_SIDE_SIZE);
+      var m, k, r, i;
+
+      function consider(id, yes) {
+        if (yes === total || usedIds.has(id) || baseIds.has(id)) return;
+        found.push({ id: id, cost: yes * yes + (total - yes) * (total - yes) });
+      }
+
+      for (m = 3; m <= mMax; m++) {
+        var counts = new Map();
+        for (i = 0; i < total; i++) {
+          r = candidates[i] % m;
+          counts.set(r, (counts.get(r) || 0) + 1);
+        }
+        counts.forEach(function (yes, res) {
+          var size = modClassSize(max, m, res);
+          if (size < MIN_SIDE_SIZE || max - size < MIN_SIDE_SIZE) return;
+          consider('mod:' + m + ':' + res, yes);
+        });
+      }
+      for (k = 3; k <= 12; k++) {
+        var dcounts = new Map();
+        for (i = 0; i < total; i++) {
+          r = digitSum(candidates[i]) % k;
+          dcounts.set(r, (dcounts.get(r) || 0) + 1);
+        }
+        dcounts.forEach(function (yes, res) { consider('dsm:' + k + ':' + res, yes); });
+      }
+
+      found.sort(function (a, b) { return a.cost - b.cost || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0); });
+      var out = [];
+      for (var f = 0; f < found.length && out.length < 40; f++) {
+        var q = byId(found[f].id);
+        if (q && isLegitQuestion(q, max)) out.push(q);
+      }
+      return out;
+    }
+
+    var source = {
+      max: max,
+      base: Object.freeze(base),
+      byId: byId,
+      adaptive: adaptive,
+      selectionCache: new Map()
+    };
+    if (!filter) sourceCache[max] = source;
+    return source;
+  }
+
+  return {
+    SUPPORTED_RANGES: SUPPORTED_RANGES,
+    BASE_MAX_MODULUS: BASE_MAX_MODULUS,
+    MIN_SIDE_SIZE: MIN_SIDE_SIZE,
+    MIN_RUNS: MIN_RUNS,
+    FORBIDDEN_TEXT: FORBIDDEN_TEXT,
+    createQuestionSource: createQuestionSource,
+    profile: profile,
+    isLegitProfile: isLegitProfile,
+    isLegitQuestion: isLegitQuestion,
+    helpers: {
+      isPrime: isPrime, isSquare: isSquare, isCube: isCube, isSquareFree: isSquareFree,
+      digitSum: digitSum, digitsOf: digitsOf, isqrt: isqrt, icbrt: icbrt
+    }
+  };
+});
+
+</script>
+<script>
+/*
+ * engine.js — CANDIDATE FILTERING and QUESTION SELECTION
+ *
+ * Pure functions; no DOM, no global state. Randomness is only used if the
+ * caller passes an `rng` function, so tests can be fully deterministic.
+ */
+(function (root, factory) {
+  var api;
+  if (typeof module === 'object' && module.exports) api = factory(require('./questions'));
+  else api = factory(root.MRQuestions);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.MREngine = api;
+})(typeof self !== 'undefined' ? self : this, function (Q) {
+  'use strict';
+
+  var VARIETY_WINDOW = 1.02; // varied mode may pick any question within 2% of the best cost
+  var VARIETY_POOL = 4;      // ...among at most this many of the best
+
+  /**
+   * Numbers in 1..max consistent with every Yes/No answer and not rejected.
+   * "unsure" answers are ignored on purpose: they never narrow anything.
+   *   answers:  [{ qid, value: 'yes' | 'no' | 'unsure' }]
+   *   rejected: [number]
+   */
+  function filterCandidates(source, answers, rejected) {
+    var tests = [];
+    answers.forEach(function (a) {
+      if (a.value !== 'yes' && a.value !== 'no') return;
+      var q = source.byId(a.qid);
+      if (!q) throw new Error('Unknown question id: ' + a.qid);
+      tests.push({ test: q.test, want: a.value === 'yes' });
+    });
+    var rej = new Set(rejected);
+    var out = [];
+    for (var n = 1; n <= source.max; n++) {
+      if (rej.has(n)) continue;
+      var ok = true;
+      for (var i = 0; i < tests.length; i++) {
+        if (!!tests[i].test(n) !== tests[i].want) { ok = false; break; }
+      }
+      if (ok) out.push(n);
+    }
+    return out;
+  }
+
+  /** How a question divides the candidates. cost = y² + n² (lower = more even). */
+  function splitOf(question, candidates) {
+    var yes = 0;
+    for (var i = 0; i < candidates.length; i++) if (question.test(candidates[i])) yes++;
+    var no = candidates.length - yes;
+    return { yes: yes, no: no, cost: yes * yes + no * no };
+  }
+
+  function compareRanked(a, b) {
+    if (a.cost !== b.cost) return a.cost - b.cost;
+    if (a.question.complexity !== b.question.complexity) return a.question.complexity - b.question.complexity;
+    return a.question.id < b.question.id ? -1 : a.question.id > b.question.id ? 1 : 0;
+  }
+
+  /** Unused questions that really split the candidates, best (most even) first. */
+  function rankQuestions(questions, candidates, usedIds) {
+    var out = [];
+    for (var i = 0; i < questions.length; i++) {
+      var q = questions[i];
+      if (usedIds.has(q.id)) continue;
+      var s = splitOf(q, candidates);
+      if (s.yes === 0 || s.no === 0) continue; // would teach us nothing
+      out.push({ question: q, yes: s.yes, no: s.no, cost: s.cost });
+    }
+    out.sort(compareRanked);
+    return out;
+  }
+
+  /**
+   * Pick the next question.
+   * 1. Standard bank, most even split first (ties: simpler, then id).
+   * 2. If no standard question can separate the candidates, generate extra
+   *    legitimate questions adaptively.
+   * 3. If even that fails, return null — the caller must NOT guess.
+   * With opts.rng the choice is randomised among near-best questions.
+   */
+  function chooseQuestion(source, candidates, usedIds, opts) {
+    var rng = opts && opts.rng;
+    var ranked = rankQuestions(source.base, candidates, usedIds);
+    var viaAdaptive = false;
+    if (!ranked.length) {
+      ranked = rankQuestions(source.adaptive(candidates, usedIds), candidates, usedIds);
+      viaAdaptive = true;
+    }
+    if (!ranked.length) return null;
+    var pick = ranked[0];
+    if (rng) {
+      var limit = pick.cost * VARIETY_WINDOW;
+      var pool = [];
+      for (var i = 0; i < ranked.length && pool.length < VARIETY_POOL; i++) {
+        if (ranked[i].cost > limit) break;
+        pool.push(ranked[i]);
+      }
+      pick = pool[Math.floor(rng() * pool.length)];
+    }
+    return { question: pick.question, viaAdaptive: viaAdaptive, yes: pick.yes, no: pick.no };
+  }
+
+  return {
+    filterCandidates: filterCandidates,
+    splitOf: splitOf,
+    rankQuestions: rankQuestions,
+    chooseQuestion: chooseQuestion,
+    VARIETY_WINDOW: VARIETY_WINDOW,
+    VARIETY_POOL: VARIETY_POOL
+  };
+});
+
+</script>
+<script>
+/*
+ * game.js — GAME STATE
+ *
+ * A small state machine with no DOM access. All state is a pure function of
+ *   answers  (ordered list of {qid, value, extra})
+ *   rejected (numbers the player said "that's not my number" about)
+ *   confirmed (player confirmed the single remaining candidate)
+ * so corrections, undo and recovery simply edit those lists and re-derive.
+ *
+ * Phases:
+ *   setup          not started
+ *   asking         >1 candidate and a question is pending
+ *   guess          exactly 1 candidate, waiting for the player's confirmation
+ *   solved         player confirmed the single candidate
+ *   contradiction  0 candidates
+ *   stuck          >1 candidates but no question (even adaptive) can split them
+ *
+ * The computer reaches `guess` ONLY when exactly one candidate remains.
+ */
+(function (root, factory) {
+  var api;
+  if (typeof module === 'object' && module.exports) api = factory(require('./questions'), require('./engine'));
+  else api = factory(root.MRQuestions, root.MREngine);
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.MRGame = api;
+})(typeof self !== 'undefined' ? self : this, function (Q, E) {
+  'use strict';
+
+  var VALUES = ['yes', 'no', 'unsure'];
+  var VALUE_LABEL = { yes: 'Yes', no: 'No', unsure: 'Not sure' };
+
+  function createGame(options) {
+    var opts = Object.assign({ max: 100, variety: 'predictable', rng: null, source: null }, options || {});
+    if (Q.SUPPORTED_RANGES.indexOf(opts.max) === -1) throw new RangeError('Unsupported range: ' + opts.max);
+    var source = opts.source || Q.createQuestionSource(opts.max);
+    var rng = opts.variety === 'varied' ? (opts.rng || Math.random) : null;
+
+    var st = {
+      started: false,
+      answers: [],
+      rejected: [],
+      confirmed: false,
+      current: null,        // { question, viaAdaptive } while phase === 'asking'
+      candidates: [],
+      phase: 'setup',
+      undoStack: []
+    };
+
+    function fail(reason) { return { ok: false, reason: reason }; }
+    function ok() { return { ok: true }; }
+
+    function usedIds() {
+      return new Set(st.answers.map(function (a) { return a.qid; }));
+    }
+
+    // Deterministic selections are memoised per question source (shared by all
+    // games on that source); randomised selections never are.
+    function cacheKey() {
+      return st.answers.map(function (a) { return a.qid + '=' + a.value; }).join(',') +
+        '|' + st.rejected.slice().sort(function (a, b) { return a - b; }).join(',');
+    }
+
+    function refresh() {
+      st.candidates = E.filterCandidates(source, st.answers, st.rejected);
+      st.current = null;
+      if (!st.started) { st.phase = 'setup'; return; }
+      if (st.candidates.length === 0) { st.phase = 'contradiction'; return; }
+      if (st.candidates.length === 1) { st.phase = st.confirmed ? 'solved' : 'guess'; return; }
+      var sel;
+      if (rng) {
+        sel = E.chooseQuestion(source, st.candidates, usedIds(), { rng: rng });
+      } else {
+        var key = cacheKey();
+        if (source.selectionCache.has(key)) sel = source.selectionCache.get(key);
+        else {
+          sel = E.chooseQuestion(source, st.candidates, usedIds(), null);
+          source.selectionCache.set(key, sel);
+        }
+      }
+      if (sel) { st.current = sel; st.phase = 'asking'; } else { st.phase = 'stuck'; }
+    }
+
+    function pushUndo(label) {
+      st.undoStack.push({
+        label: label,
+        answers: st.answers.map(function (a) { return { qid: a.qid, value: a.value, extra: a.extra }; }),
+        rejected: st.rejected.slice(),
+        confirmed: st.confirmed
+      });
+      if (st.undoStack.length > 500) st.undoStack.shift();
+    }
+
+    function questionOf(qid) { return source.byId(qid); }
+
+    /* ---------- actions ---------- */
+
+    function start() {
+      if (st.started) return fail('already-started');
+      st.started = true;
+      refresh();
+      return ok();
+    }
+
+    function answer(value) {
+      if (st.phase !== 'asking') return fail('no-question-pending');
+      if (VALUES.indexOf(value) === -1) return fail('bad-value');
+      pushUndo('your answer to Q' + (st.answers.length + 1));
+      st.answers.push({ qid: st.current.question.id, value: value, extra: st.current.viaAdaptive || st.current.question.adaptive });
+      st.confirmed = false;
+      refresh();
+      return ok();
+    }
+
+    function setAnswer(index, value) {
+      if (!st.started) return fail('not-started');
+      if (!Number.isInteger(index) || index < 0 || index >= st.answers.length) return fail('bad-index');
+      if (VALUES.indexOf(value) === -1) return fail('bad-value');
+      if (st.answers[index].value === value) return ok();
+      pushUndo('the change to Q' + (index + 1));
+      st.answers[index].value = value;
+      st.confirmed = false;
+      refresh();
+      return ok();
+    }
+
+    function confirmGuess() {
+      if (st.phase !== 'guess') return fail('no-guess-pending');
+      pushUndo('confirming ' + st.candidates[0]);
+      st.confirmed = true;
+      refresh();
+      return ok();
+    }
+
+    function rejectGuess() {
+      if (st.phase !== 'guess') return fail('no-guess-pending');
+      var n = st.candidates[0];
+      pushUndo('rejecting ' + n);
+      st.rejected.push(n);
+      st.confirmed = false;
+      refresh();
+      return ok();
+    }
+
+    function restoreRejected(n) {
+      var i = st.rejected.indexOf(n);
+      if (i === -1) return fail('not-rejected');
+      pushUndo('restoring ' + n);
+      st.rejected.splice(i, 1);
+      st.confirmed = false;
+      refresh();
+      return ok();
+    }
+
+    function clearUnsure() {
+      if (!st.answers.some(function (a) { return a.value === 'unsure'; })) return fail('nothing-to-clear');
+      pushUndo('re-asking the Not sure questions');
+      st.answers = st.answers.filter(function (a) { return a.value !== 'unsure'; });
+      st.confirmed = false;
+      refresh();
+      return ok();
+    }
+
+    function undo() {
+      var snap = st.undoStack.pop();
+      if (!snap) return fail('nothing-to-undo');
+      st.answers = snap.answers;
+      st.rejected = snap.rejected;
+      st.confirmed = snap.confirmed;
+      refresh();
+      return { ok: true, label: snap.label };
+    }
+
+    /* ---------- derived view ---------- */
+
+    // Candidate count after each answer (all currently active rejections apply
+    // throughout, so the last row always equals the live candidate count).
+    function remainingTimeline() {
+      var rej = new Set(st.rejected);
+      var pool = [];
+      for (var n = 1; n <= source.max; n++) if (!rej.has(n)) pool.push(n);
+      return st.answers.map(function (a) {
+        if (a.value === 'yes' || a.value === 'no') {
+          var q = questionOf(a.qid), want = a.value === 'yes';
+          pool = pool.filter(function (x) { return !!q.test(x) === want; });
+        }
+        return pool.length;
+      });
+    }
+
+    function trial(answers, rejected) {
+      return E.filterCandidates(source, answers, rejected).length;
+    }
+
+    // Single-change repairs that would leave at least one candidate.
+    function suggestFixes() {
+      var out = [];
+      st.rejected.forEach(function (n, idx) {
+        var rest = st.rejected.slice(); rest.splice(idx, 1);
+        var left = trial(st.answers, rest);
+        if (left > 0) out.push({ kind: 'restore', n: n, resulting: left });
+      });
+      var flips = [], unsures = [];
+      st.answers.forEach(function (a, i) {
+        if (a.value === 'unsure') return;
+        var q = questionOf(a.qid);
+        ['flip', 'unsure'].forEach(function (mode) {
+          var v = mode === 'unsure' ? 'unsure' : (a.value === 'yes' ? 'no' : 'yes');
+          var copy = st.answers.map(function (x, j) { return j === i ? { qid: x.qid, value: v } : x; });
+          var left = trial(copy, st.rejected);
+          if (left > 0) {
+            var item = { kind: 'set', index: i, number: i + 1, text: q.text, from: a.value, value: v, resulting: left };
+            (mode === 'unsure' ? unsures : flips).push(item);
+          }
+        });
+      });
+      flips.sort(function (a, b) { return a.index - b.index; });     // read top-down, Q1 first
+      unsures.sort(function (a, b) { return a.index - b.index; });
+      return out.concat(flips, unsures);
+    }
+
+    function view() {
+      var timeline = remainingTimeline();
+      var unsureCount = st.answers.filter(function (a) { return a.value === 'unsure'; }).length;
+      var top = st.undoStack.length ? st.undoStack[st.undoStack.length - 1] : null;
+      return {
+        phase: st.phase,
+        max: source.max,
+        candidates: st.candidates.slice(),
+        candidateCount: st.candidates.length,
+        question: st.current ? {
+          id: st.current.question.id,
+          text: st.current.question.text,
+          tag: st.current.question.tag,
+          extra: !!(st.current.viaAdaptive || st.current.question.adaptive)
+        } : null,
+        history: st.answers.map(function (a, i) {
+          var q = questionOf(a.qid);
+          return {
+            index: i, number: i + 1, qid: a.qid, text: q.text, tag: q.tag, extra: !!a.extra,
+            value: a.value, label: VALUE_LABEL[a.value], remainingAfter: timeline[i]
+          };
+        }),
+        rejected: st.rejected.slice(),
+        unsureCount: unsureCount,
+        answeredCount: st.answers.length,
+        solvedNumber: st.phase === 'solved' ? st.candidates[0] : null,
+        guess: st.phase === 'guess' ? st.candidates[0] : null,
+        canUndo: st.undoStack.length > 0,
+        undoLabel: top ? top.label : null,
+        suggestions: st.phase === 'contradiction' ? suggestFixes() : []
+      };
+    }
+
+    return {
+      start: start, answer: answer, setAnswer: setAnswer, confirmGuess: confirmGuess,
+      rejectGuess: rejectGuess, restoreRejected: restoreRejected, clearUnsure: clearUnsure,
+      undo: undo, view: view, source: source
+    };
+  }
+
+  return { createGame: createGame, VALUE_LABEL: VALUE_LABEL };
+});
+
+</script>
+<script>
+/*
+ * ui.js — USER INTERFACE
+ *
+ * Renders MRGame's view() into the DOM. No game rules live here.
+ * All text is inserted with textContent / createElement (no innerHTML with data).
+ */
+(function () {
+  'use strict';
+
+  var MRQuestions = window.MRQuestions, MRGame = window.MRGame;
+  var byId = function (id) { return document.getElementById(id); };
+
+  var game = null;
+  var round = 1;
+  var notice = null; // { text, kind }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === 'text') node.textContent = props[k];
+      else if (k === 'class') node.className = props[k];
+      else node.setAttribute(k, props[k]);
+    });
+    (children || []).forEach(function (c) { node.appendChild(c); });
+    return node;
+  }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+  /* ---------- actions ---------- */
+
+  function startGame() {
+    var max = Number(byId('range').value);
+    game = MRGame.createGame({ max: max, variety: byId('order').value });
+    game.start();
+    notice = null;
+    byId('howto').open = false;
+    render('yesBtn');
+  }
+
+  function restart() {
+    game = null;
+    round += 1;
+    notice = null;
+    render('startBtn');
+  }
+
+  function run(action, makeNotice, focusKey) {
+    if (!game) return;
+    var res = action();
+    if (!res.ok) return;
+    notice = makeNotice ? makeNotice(res) : null;
+    render(focusKey);
+  }
+
+  function answer(value) { run(function () { return game.answer(value); }, null); }
+
+  function changeAnswer(index, value) {
+    run(function () { return game.setAnswer(index, value); }, function () {
+      var v = game.view();
+      var label = MRGame.VALUE_LABEL[value];
+      if (v.phase === 'contradiction') {
+        return { kind: 'fail', text: 'Q' + (index + 1) + ' changed to ' + label + ', but the answers still contradict each other.' };
+      }
+      if (v.phase === 'stuck') {
+        return { kind: 'fail', text: 'Q' + (index + 1) + ' changed to ' + label + '. ' + plural(v.candidateCount, 'number', 'numbers') + ' remain and no question can separate them yet.' };
+      }
+      return { kind: 'success', text: 'Q' + (index + 1) + ' changed to ' + label + '. Recalculated: ' + plural(v.candidateCount, 'possible number', 'possible numbers') + ' fit all answers.' };
+    }, 'row' + index + '-' + value);
+  }
+
+  function undo() {
+    run(function () { return game.undo(); }, function (res) {
+      return { kind: 'success', text: 'Undid ' + res.label + '.' };
+    });
+  }
+
+  function restore(n) {
+    run(function () { return game.restoreRejected(n); }, function () {
+      return { kind: 'success', text: 'Restored ' + n + ' as a possible number.' };
+    });
+  }
+
+  function reviewAnswers() {
+    var t = byId('historyTitle');
+    t.scrollIntoView({ block: 'start' });
+    t.focus();
+  }
+
+  /* ---------- rendering ---------- */
+
+  function setStatus(headline, description) {
+    byId('headline').textContent = headline;
+    byId('description').textContent = description;
+  }
+
+  function renderHistory(v) {
+    var list = byId('history');
+    list.textContent = '';
+    if (!v.history.length) {
+      list.appendChild(el('li', { class: 'empty', text: 'Questions and your answers will appear here.' }));
+      return;
+    }
+    v.history.slice().reverse().forEach(function (h) {
+      var unsure = h.value === 'unsure';
+      var qline = el('div', { class: 'q' });
+      qline.appendChild(document.createTextNode(h.text));
+      if (h.extra) qline.appendChild(el('span', { class: 'badge', text: 'Extra question' }));
+      var meta = el('div', { class: 'meta' });
+      meta.appendChild(document.createTextNode('Your answer: '));
+      meta.appendChild(el('strong', { text: h.label }));
+      if (unsure) meta.appendChild(el('span', { class: 'badge', text: '❓ Uncertain · no narrowing' }));
+      meta.appendChild(document.createTextNode(' · ' + plural(h.remainingAfter, 'possibility', 'possibilities') + ' left'));
+      var fix = el('div', { class: 'fix', role: 'group', 'aria-label': 'Change your answer to question ' + h.number });
+      ['yes', 'no', 'unsure'].forEach(function (val) {
+        var b = el('button', {
+          type: 'button', text: MRGame.VALUE_LABEL[val],
+          'aria-pressed': String(h.value === val), 'data-focus-key': 'row' + h.index + '-' + val
+        });
+        b.addEventListener('click', function () { changeAnswer(h.index, val); });
+        fix.appendChild(b);
+      });
+      list.appendChild(el('li', { class: 'entry' + (unsure ? ' unsure' : '') }, [
+        el('span', { class: 'n', text: 'Q' + h.number }),
+        el('div', { class: 'body' }, [qline, meta, fix])
+      ]));
+    });
+  }
+
+  function renderRejected(v) {
+    var section = byId('rejectedSection');
+    var list = byId('rejectedList');
+    list.textContent = '';
+    section.hidden = v.rejected.length === 0;
+    v.rejected.forEach(function (n, i) {
+      var b = el('button', { type: 'button', text: 'Restore ' + n, 'data-focus-key': 'restore' + i });
+      b.addEventListener('click', function () { restore(n); });
+      list.appendChild(el('li', {}, [el('span', { text: 'You said ' + n + ' is not your number.' }), b]));
+    });
+  }
+
+  function renderProblem(v) {
+    var box = byId('problemBox');
+    var list = byId('fixList');
+    var extra = byId('problemExtra');
+    list.textContent = '';
+    extra.textContent = '';
+    if (v.phase === 'contradiction') {
+      box.hidden = false;
+      byId('problemTitle').textContent = 'No number fits all of these answers.';
+      byId('problemText').textContent = 'Every number from 1 to ' + v.max + ' has been ruled out. If every answer was truthful this cannot happen, so one answer (or a “not my number” click) must be a mistake. Pick a repair below, correct any answer in the list, or undo — nothing is lost.';
+      var INLINE_REPAIRS = 5;
+      var moreList = null;
+      v.suggestions.forEach(function (s, i) {
+        var label, action;
+        if (s.kind === 'restore') {
+          label = 'Put ' + s.n + ' back as a possible number (leaves ' + plural(s.resulting, 'number', 'numbers') + ')';
+          action = function () { restore(s.n); };
+        } else {
+          var to = MRGame.VALUE_LABEL[s.value];
+          label = 'Change Q' + s.number + ' “' + s.text + '” from ' + MRGame.VALUE_LABEL[s.from] + ' to ' + to + ' (leaves ' + plural(s.resulting, 'number', 'numbers') + ')';
+          action = function () { changeAnswer(s.index, s.value); };
+        }
+        var b = el('button', { type: 'button', text: label, 'data-focus-key': 'fix' + i });
+        b.addEventListener('click', action);
+        var li = el('li', {}, [b]);
+        if (i < INLINE_REPAIRS) {
+          list.appendChild(li);
+        } else {
+          if (!moreList) {
+            moreList = el('ul', { class: 'fixlist' });
+            var more = el('details', {}, [
+              el('summary', { text: 'More possible repairs (' + (v.suggestions.length - INLINE_REPAIRS) + ')' }),
+              moreList
+            ]);
+            list.appendChild(el('li', {}, [more]));
+          }
+          moreList.appendChild(li);
+        }
+      });
+      if (!v.suggestions.length) {
+        list.appendChild(el('li', { text: 'No single change fixes this, so at least two answers conflict. Review the list below and correct them one at a time.' }));
+      }
+    } else if (v.phase === 'stuck') {
+      box.hidden = false;
+      byId('problemTitle').textContent = 'I can’t narrow it down any further.';
+      byId('problemText').textContent = plural(v.candidateCount, 'number still fits', 'numbers still fit') + ' your answers, but I have no unused mathematical question that separates them. I won’t guess between them. ' +
+        (v.unsureCount ? 'Answering Not sure to a question gives me no information, so try turning a Not sure into Yes or No below, or let me ask those questions again.' : 'Please review your answers below.');
+      if (v.unsureCount) {
+        var again = el('button', { type: 'button', text: 'Ask my Not sure questions again', 'data-focus-key': 'clearUnsure' });
+        again.addEventListener('click', function () {
+          run(function () { return game.clearUnsure(); }, function () {
+            return { kind: 'success', text: 'The questions you marked Not sure can be asked again.' };
+          });
+        });
+        extra.appendChild(again);
+      }
+    } else {
+      box.hidden = true;
+    }
+  }
+
+  function defaultFocusFor(phase) {
+    switch (phase) {
+      case 'asking': return byId('yesBtn');
+      case 'guess': return byId('correctBtn');
+      case 'solved': return byId('againBtn');
+      case 'contradiction':
+      case 'stuck': return byId('problemTitle');
+      default: return byId('startBtn');
+    }
+  }
+
+  // skipFocus: true on page load and passive changes, so the page never steals focus
+  // from the skip link / headings; focus is only moved in response to user actions.
+  function render(focusKey, skipFocus) {
+    var active = document.activeElement;
+    var activeKey = active && active.getAttribute ? active.getAttribute('data-focus-key') : null;
+    var activeId = active && active.id ? active.id : null;
+    var v = game ? game.view() : null;
+
+    byId('roundLabel').textContent = 'ROUND ' + pad2(round);
+
+    // settings only change between rounds
+    byId('range').disabled = !!game;
+    byId('order').disabled = !!game;
+    byId('startControls').hidden = !!game;
+    byId('playArea').hidden = !game;
+    byId('undoBtn').disabled = !(v && v.canUndo);
+    byId('undoBtn').textContent = v && v.canUndo ? '↶ Undo ' + v.undoLabel : '↶ Undo last step';
+    byId('reviewBtn').disabled = !game;
+
+    if (!v) {
+      var max = Number(byId('range').value);
+      byId('rangeLabel').textContent = '1–' + max;
+      byId('remainingLabel').textContent = max + ' possible numbers';
+      setStatus('Ready when you are?', 'Choose your range, think of one whole number in it, then press the button. Don’t type your number anywhere.');
+    } else {
+      byId('rangeLabel').textContent = '1–' + v.max;
+      byId('remainingLabel').textContent = v.phase === 'solved' ? 'Solved'
+        : v.phase === 'contradiction' ? 'No numbers fit'
+        : plural(v.candidateCount, 'possible number', 'possible numbers');
+
+      var asking = v.phase === 'asking';
+      byId('questionBox').hidden = !asking;
+      byId('answerButtons').hidden = !asking;
+      byId('answerHint').hidden = !asking;
+      byId('guessBox').hidden = v.phase !== 'guess';
+      byId('solvedBox').hidden = v.phase !== 'solved';
+
+      if (asking) {
+        byId('qTag').textContent = 'QUESTION ' + (v.answeredCount + 1) + ' · ' + (v.question.extra ? 'EXTRA MATH PROPERTY' : v.question.tag.toUpperCase());
+        byId('questionText').textContent = v.question.text;
+        byId('questionText').setAttribute('data-qid', v.question.id);
+        var note = byId('qNote');
+        note.hidden = !v.question.extra;
+        note.textContent = v.question.extra ? 'My standard questions couldn’t separate the remaining numbers, so I generated a new mathematical question instead of guessing.' : '';
+        setStatus('Let’s narrow it down.', plural(v.candidateCount, 'number still fits', 'numbers still fit') + ' your answers. Answer honestly — your number stays secret. Not sure is fine and changes nothing.');
+      } else if (v.phase === 'guess') {
+        byId('guessText').textContent = 'Only ' + v.guess + ' fits.';
+        byId('guessDesc').textContent = 'Every other number from 1 to ' + v.max + ' conflicts with your answers. Is ' + v.guess + ' your number?';
+        setStatus('I’ve worked it out.', 'Exactly one number is consistent with everything you told me.');
+      } else if (v.phase === 'solved') {
+        byId('solvedText').textContent = '🏆 Mind read: ' + v.solvedNumber;
+        byId('solvedDesc').textContent = 'I identified it after ' + plural(v.answeredCount, 'question', 'questions') + (v.unsureCount ? ' (' + v.unsureCount + ' marked Not sure)' : '') + '. You can still undo or correct an answer above if something was off.';
+        setStatus('🏆 Mind read!', 'Deduced from math properties only — no guessing.');
+      } else if (v.phase === 'contradiction') {
+        setStatus('Your answers contradict each other.', 'No number matches every answer, so something needs correcting.');
+      } else if (v.phase === 'stuck') {
+        setStatus('I need a different kind of clue.', 'I’m not going to guess while several numbers remain.');
+      }
+      renderProblem(v);
+      renderHistory(v);
+      renderRejected(v);
+      byId('questionCount').textContent = v.answeredCount + ' asked' + (v.unsureCount ? ' · ' + v.unsureCount + ' uncertain' : '');
+      var meter = byId('meter');
+      meter.textContent = '';
+      for (var i = 0; i < Math.min(v.answeredCount, 30); i++) meter.appendChild(el('span', { class: 'pip' }));
+    }
+
+    var n = byId('notice');
+    n.className = 'message' + (notice ? ' ' + notice.kind : '');
+    n.textContent = notice ? notice.text : '';
+
+    // ---- focus management ----
+    if (skipFocus) return;
+    var target = null;
+    if (focusKey) target = document.querySelector('[data-focus-key="' + focusKey + '"]') || byId(focusKey);
+    if (!target && activeKey) target = document.querySelector('[data-focus-key="' + activeKey + '"]');
+    if (!target && activeId) {
+      var same = byId(activeId);
+      if (same && same.offsetParent !== null) target = same;
+    }
+    var phase = v ? v.phase : 'setup';
+    var wantsPhaseFocus = !target || target.offsetParent === null ||
+      (phase !== 'asking' && target.id && /^(yesBtn|noBtn|unsureBtn)$/.test(target.id));
+    if (wantsPhaseFocus) target = defaultFocusFor(phase);
+    if (target && target.focus) target.focus({ preventScroll: false });
+  }
+
+  /* ---------- wiring ---------- */
+
+  byId('startBtn').addEventListener('click', startGame);
+  byId('yesBtn').addEventListener('click', function () { answer('yes'); });
+  byId('noBtn').addEventListener('click', function () { answer('no'); });
+  byId('unsureBtn').addEventListener('click', function () { answer('unsure'); });
+  byId('correctBtn').addEventListener('click', function () { run(function () { return game.confirmGuess(); }, null); });
+  byId('wrongBtn').addEventListener('click', function () { run(function () { return game.rejectGuess(); }, null); });
+  byId('againBtn').addEventListener('click', restart);
+  byId('restartBtn').addEventListener('click', restart);
+  byId('undoBtn').addEventListener('click', undo);
+  byId('reviewBtn').addEventListener('click', reviewAnswers);
+  byId('range').addEventListener('change', function () { render(null, true); });
+
+  document.addEventListener('keydown', function (e) {
+    if (!game || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    var t = e.target;
+    var tag = t && t.tagName;
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (t && t.isContentEditable)) return;
+    if (t && t.closest && t.closest('#calcPanel')) return; // the Division Calculator is independent of the game
+    if (game.view().phase !== 'asking') return;
+    var k = e.key.toLowerCase();
+    if (k === 'y') { e.preventDefault(); answer('yes'); }
+    else if (k === 'n') { e.preventDefault(); answer('no'); }
+    else if (k === 's') { e.preventDefault(); answer('unsure'); }
+  });
+
+  // Exposed only so automated browser tests can inspect state; not used by the UI.
+  window.__mindReaderDebug = { getView: function () { return game ? game.view() : null; }, MRQuestions: MRQuestions };
+
+  render(null, true);
+})();
+
+</script>
+<script>
+/*
+ * calculator.js — DIVISION CALCULATOR (pure logic)
+ *
+ * A standalone convenience tool. It knows nothing about the Mind Reader game:
+ * it takes two strings typed by the player and returns a result description.
+ *
+ *   dividend = divisor × quotient + remainder,   0 ≤ remainder < |divisor|
+ *
+ * (Euclidean division: the remainder is never negative. For a positive divisor
+ *  this is the usual floor division, e.g. -58 ÷ 7 = -9 remainder 5.)
+ *
+ * All arithmetic is done with BigInt, so results are exact, and every result
+ * is re-checked against the identity above before it is returned.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.MRCalculator = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  var MAX_SAFE = BigInt(Number.MAX_SAFE_INTEGER); // 9007199254740991
+  var MAX_SAFE_TEXT = '9,007,199,254,740,991';
+  var INTEGER_PATTERN = /^[+-]?[0-9]+$/;
+
+  /**
+   * Classify one text field.
+   * Returns { state: 'empty' | 'invalid' | 'out-of-range' | 'ok', value: BigInt | null }
+   */
+  function parseField(text) {
+    var s = typeof text === 'string' ? text.trim() : (text === null || text === undefined ? '' : String(text).trim());
+    if (s === '') return { state: 'empty', value: null };
+    if (!INTEGER_PATTERN.test(s)) return { state: 'invalid', value: null };
+    var digits = s.replace(/^[+-]/, '').replace(/^0+/, '');
+    if (digits.length > 16) return { state: 'out-of-range', value: null }; // too long to be safe; avoids parsing huge strings
+    var v = BigInt(s);
+    if (v > MAX_SAFE || v < -MAX_SAFE) return { state: 'out-of-range', value: null };
+    return { state: 'ok', value: v };
+  }
+
+  function fieldMessage(label, state) {
+    if (state === 'invalid') {
+      return label + ' must be a whole number: digits only, with an optional leading minus sign (no decimals, commas, spaces or letters).';
+    }
+    if (state === 'out-of-range') {
+      return label + ' is outside the safe integer range (−' + MAX_SAFE_TEXT + ' to ' + MAX_SAFE_TEXT + '), so it cannot be divided exactly.';
+    }
+    return '';
+  }
+
+  function blank(status, fields, message) {
+    return {
+      status: status, fields: fields, message: message,
+      dividend: null, divisor: null, quotient: null, remainder: null, equation: null
+    };
+  }
+
+  /**
+   * calculate(dividendText, divisorText)
+   * status: 'ok' | 'empty' | 'invalid' | 'out-of-range' | 'zero-divisor' | 'error'
+   * Only when status === 'ok' are dividend/divisor/quotient/remainder (Numbers) and equation (string) set.
+   */
+  function calculate(dividendText, divisorText) {
+    var a = parseField(dividendText);
+    var b = parseField(divisorText);
+    var fields = { dividend: a.state, divisor: b.state };
+
+    // 1. Field errors take priority (dividend first, both reported).
+    var problems = [];
+    var dMsg = fieldMessage('Dividend', a.state);
+    var vMsg = fieldMessage('Divisor', b.state);
+    if (dMsg) problems.push(dMsg);
+    if (vMsg) problems.push(vMsg);
+    if (problems.length) {
+      var kind = (a.state === 'invalid' || b.state === 'invalid') ? 'invalid' : 'out-of-range';
+      return blank(kind, fields, problems.join(' '));
+    }
+
+    // 2. A zero divisor is rejected even if the dividend is still empty.
+    if (b.state === 'ok' && b.value === 0n) {
+      fields.divisor = 'zero';
+      return blank('zero-divisor', fields,
+        'Divisor cannot be zero. Division by zero is undefined, so no quotient or remainder is shown.');
+    }
+
+    // 3. Missing input.
+    if (a.state === 'empty' && b.state === 'empty') {
+      return blank('empty', fields, 'Enter a dividend and a divisor to see the quotient and remainder.');
+    }
+    if (a.state === 'empty') return blank('empty', fields, 'Enter a dividend to see the quotient and remainder.');
+    if (b.state === 'empty') return blank('empty', fields, 'Enter a divisor to see the quotient and remainder.');
+
+    // 4. Exact Euclidean division with BigInt (remainder always 0 ≤ r < |divisor|).
+    var x = a.value, y = b.value;
+    var q = x / y;
+    var r = x % y;
+    if (r < 0n) {
+      if (y > 0n) { q -= 1n; r += y; } else { q += 1n; r -= y; }
+    }
+
+    // 5. Never return something that violates the defining identity or the safe range.
+    var absY = y < 0n ? -y : y;
+    var consistent = (x === y * q + r) && r >= 0n && r < absY &&
+      q <= MAX_SAFE && q >= -MAX_SAFE && r <= MAX_SAFE;
+    if (!consistent) {
+      return blank('error', fields, 'This calculation could not be verified, so no result is shown.');
+    }
+
+    var out = {
+      status: 'ok', fields: fields,
+      dividend: Number(x), divisor: Number(y), quotient: Number(q), remainder: Number(r)
+    };
+    out.equation = out.dividend + ' = ' + out.divisor + ' × ' + out.quotient + ' + ' + out.remainder;
+    out.message = out.equation + (x < 0n || y < 0n ? ' (the remainder is never negative)' : '');
+    return out;
+  }
+
+  return {
+    calculate: calculate,
+    parseField: parseField,
+    MAX_SAFE_INTEGER: Number.MAX_SAFE_INTEGER
+  };
+});
+
+</script>
+<script>
+/*
+ * calculator-ui.js — DIVISION CALCULATOR PANEL
+ *
+ * Connects the calculator panel's inputs to MRCalculator. It reads only the two
+ * text fields inside #calcPanel and writes only inside #calcPanel. It has no
+ * access to, and no knowledge of, the game, its questions or its state.
+ */
+(function () {
+  'use strict';
+
+  var MRCalculator = window.MRCalculator;
+  var panel = document.getElementById('calcPanel');
+  if (!panel || !MRCalculator) return;
+
+  var byId = function (id) { return document.getElementById(id); };
+  var inputs = { dividend: byId('calcDividend'), divisor: byId('calcDivisor') };
+  var tiles = {
+    dividend: byId('calcOutDividend'),
+    divisor: byId('calcOutDivisor'),
+    quotient: byId('calcOutQuotient'),
+    remainder: byId('calcOutRemainder')
+  };
+  var message = byId('calcMessage');
+  var EMPTY = '—';
+
+  function update() {
+    var res = MRCalculator.calculate(inputs.dividend.value, inputs.divisor.value);
+
+    var ok = res.status === 'ok';
+    tiles.dividend.textContent = ok ? String(res.dividend) : EMPTY;
+    tiles.divisor.textContent = ok ? String(res.divisor) : EMPTY;
+    tiles.quotient.textContent = ok ? String(res.quotient) : EMPTY;
+    tiles.remainder.textContent = ok ? String(res.remainder) : EMPTY;
+    panel.setAttribute('data-calc-status', res.status);
+
+    ['dividend', 'divisor'].forEach(function (name) {
+      var bad = res.fields[name] === 'invalid' || res.fields[name] === 'out-of-range' || res.fields[name] === 'zero';
+      if (bad) inputs[name].setAttribute('aria-invalid', 'true');
+      else inputs[name].removeAttribute('aria-invalid');
+    });
+
+    message.textContent = res.message;
+    message.className = 'calc-message' + (ok ? ' ok' : (res.status === 'empty' ? '' : ' bad'));
+  }
+
+  inputs.dividend.addEventListener('input', update);
+  inputs.divisor.addEventListener('input', update);
+
+  byId('calcClear').addEventListener('click', function () {
+    inputs.dividend.value = '';
+    inputs.divisor.value = '';
+    update();
+    inputs.dividend.focus(); // stays inside the calculator panel
+  });
+
+  update();
+})();
+
+</script>
+</body>
+</html>

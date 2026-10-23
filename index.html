@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Mind Reader — Computer Guesses Your Number</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the game</a>
+<div class="app">
+  <header>
+    <div class="eyebrow">You think it. I deduce it.</div>
+    <h1><span aria-hidden="true">🧠</span> Mind Reader</h1>
+    <p class="sub">Think of a whole number and keep it secret. The computer asks mathematical yes/no questions — never “Is it X?” and never higher/lower. It only names a number once exactly one number fits your answers.</p>
+  </header>
+
+  <main class="card" id="main">
+    <div class="topline">
+      <span id="roundLabel">ROUND 01</span>
+      <span class="pill" id="rangeLabel">1–100</span>
+      <span class="pill" id="remainingLabel">100 possible numbers</span>
+    </div>
+
+    <div class="content">
+      <div class="settings">
+        <div class="field">
+          <label for="range">Number range</label>
+          <select id="range">
+            <option value="50">1 to 50 · Quick</option>
+            <option value="100" selected>1 to 100 · Classic</option>
+            <option value="250">1 to 250 · Tricky</option>
+            <option value="1000">1 to 1000 · Expert</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="order">Question order</label>
+          <select id="order">
+            <option value="varied" selected>Varied (different each round)</option>
+            <option value="predictable">Predictable (same every time)</option>
+          </select>
+        </div>
+      </div>
+
+      <details class="howto" id="howto" open>
+        <summary>How to play</summary>
+        <ol>
+          <li>Pick a range, think of one whole number in it, and keep it in your head. <strong>Never type it anywhere.</strong></li>
+          <li>Press “I have my number”, then answer each question with <strong>Yes</strong>, <strong>No</strong> or <strong>Not sure</strong>.</li>
+          <li><strong>Not sure</strong> is safe: it narrows nothing and is marked as uncertain in your list.</li>
+          <li>Made a mistake? Use the Yes / No / Not sure buttons on any earlier answer to fix it, or press Undo. The count of possible numbers is recalculated instantly.</li>
+          <li>When exactly one number fits, the computer names it and asks you to confirm. A mistaken “not my number” click can be undone.</li>
+        </ol>
+      </details>
+
+      <div class="status" aria-live="polite" aria-atomic="true">
+        <h2 id="headline">Ready when you are?</h2>
+        <p id="description">Choose your range, think of one whole number in it, then press the button. Don’t type your number anywhere.</p>
+      </div>
+
+      <div class="answers" id="startControls">
+        <button class="primary" id="startBtn" type="button">I have my number ↗</button>
+      </div>
+
+      <div id="playArea" hidden>
+        <div class="question" id="questionBox" hidden>
+          <div class="qtag" id="qTag">QUESTION 1</div>
+          <h2 id="questionText" data-qid="">Is your number even?</h2>
+          <p class="qnote" id="qNote" hidden></p>
+        </div>
+        <div class="answers" id="answerButtons" role="group" aria-label="Your answer" hidden>
+          <button class="yes" id="yesBtn" type="button" aria-keyshortcuts="Y">Yes</button>
+          <button class="no" id="noBtn" type="button" aria-keyshortcuts="N">No</button>
+          <button class="unsure" id="unsureBtn" type="button" aria-keyshortcuts="S">Not sure</button>
+        </div>
+        <p class="hint" id="answerHint" hidden>Shortcuts: <kbd>Y</kbd> Yes · <kbd>N</kbd> No · <kbd>S</kbd> Not sure</p>
+
+        <div class="guessbox" id="guessBox" hidden>
+          <h3 id="guessText" tabindex="-1">Only one number fits.</h3>
+          <p id="guessDesc"></p>
+          <button class="primary" id="correctBtn" type="button">🎯 Yes, that’s my number</button>
+          <button id="wrongBtn" type="button">No, that’s not my number</button>
+        </div>
+
+        <div class="solvedbox" id="solvedBox" hidden>
+          <h3 id="solvedText" tabindex="-1">Mind read!</h3>
+          <p id="solvedDesc"></p>
+          <button class="primary" id="againBtn" type="button">Play again</button>
+        </div>
+
+        <div class="problembox" id="problemBox" hidden>
+          <h3 id="problemTitle" tabindex="-1"></h3>
+          <p id="problemText"></p>
+          <ul class="fixlist" id="fixList"></ul>
+          <div class="row" id="problemExtra"></div>
+        </div>
+
+        <div class="meter" id="meter" aria-hidden="true"></div>
+
+        <section class="history" aria-labelledby="historyTitle">
+          <div class="historyhead">
+            <h2 id="historyTitle" tabindex="-1">My questions</h2>
+            <span id="questionCount">0 asked</span>
+          </div>
+          <ul class="historylist" id="history"></ul>
+          <div class="rejected" id="rejectedSection" hidden>
+            <h3>Numbers I named that you rejected</h3>
+            <ul id="rejectedList"></ul>
+          </div>
+        </section>
+      </div>
+
+      <div class="message" id="notice" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="bottom">
+      <button id="undoBtn" type="button" disabled>↶ Undo last step</button>
+      <button id="reviewBtn" type="button">✎ Review answers</button>
+      <button id="restartBtn" type="button">↻ Start over</button>
+    </div>
+  </main>
+  <aside class="card calc" id="calcPanel" aria-labelledby="calcTitle">
+    <div class="topline"><h2 class="calc-title" id="calcTitle">Division Calculator</h2></div>
+    <div class="calc-body">
+      <p class="calc-note">A handy helper for checking remainders. It uses only the numbers you type here.</p>
+      <div class="field">
+        <label for="calcDividend">Dividend</label>
+        <input id="calcDividend" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24" aria-describedby="calcMessage">
+      </div>
+      <div class="field">
+        <label for="calcDivisor">Divisor</label>
+        <input id="calcDivisor" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" maxlength="24" aria-describedby="calcMessage">
+      </div>
+      <div class="calc-results" role="group" aria-label="Division result">
+        <div class="calc-tile"><span class="calc-k">Dividend</span><span class="calc-v" id="calcOutDividend">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Divisor</span><span class="calc-v" id="calcOutDivisor">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Quotient</span><span class="calc-v" id="calcOutQuotient">—</span></div>
+        <div class="calc-tile"><span class="calc-k">Remainder</span><span class="calc-v" id="calcOutRemainder">—</span></div>
+      </div>
+      <p class="calc-message" id="calcMessage" role="status" aria-live="polite"></p>
+      <button id="calcClear" type="button">Clear</button>
+    </div>
+  </aside>
+  <div class="footer">Fully offline · no tracking · no direct number checks — just mathematical deduction.</div>
+</div>
+
+<script src="js/questions.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/calculator.js"></script>
+<script src="js/calculator-ui.js"></script>
+</body>
+</html>

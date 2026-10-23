@@ -1,0 +1,17 @@
+{
+  "name": "mind-reader",
+  "version": "2.1.0",
+  "description": "Offline number-guessing game: the computer identifies your secret number using only mathematical-property questions.",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "node tests/run-tests.js && node tests/calculator-test.js",
+    "test:calculator": "node tests/calculator-test.js",
+    "test:report": "node tests/run-tests.js --write-report && node tests/calculator-test.js --write-report",
+    "build": "node tools/build-standalone.js",
+    "test:browser": "python3 tests/browser-test.py",
+    "test:browser:report": "python3 tests/browser-test.py --write-report"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
